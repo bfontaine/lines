@@ -14,6 +14,15 @@ func CountFromReader(r io.Reader) (count int64, err error) {
 	return
 }
 
+func countNewlinesFromBuffer(buf []byte, n int) (count int64) {
+	for i := 0; i < n; i++ {
+		if buf[i] == '\n' {
+			count++
+		}
+	}
+	return
+}
+
 // LiveCountFromReader counts lines from a reader with "live" updates
 func LiveCountFromReader(r io.Reader) (<-chan int64, <-chan error) {
 	lines := make(chan int64, 16)
@@ -31,15 +40,11 @@ func LiveCountFromReader(r io.Reader) (<-chan int64, <-chan error) {
 
 		for {
 			n, err := r.Read(buf)
-			for i := 0; i < n; i++ {
-				if buf[i] == '\n' {
-					count++
-				}
-			}
+			count += countNewlinesFromBuffer(buf, n)
+			lines <- count
 
 			if err != nil {
 				if err == io.EOF {
-					// FIXME Should we count a newline here?
 					err = nil
 				}
 				errors <- err
